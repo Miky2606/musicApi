@@ -1,13 +1,13 @@
 const db = {
-      /* "host": "w1h4cr5sb73o944p.cbetxkdyhwsb.us-east-1.rds.amazonaws.com",
+       "host": "w1h4cr5sb73o944p.cbetxkdyhwsb.us-east-1.rds.amazonaws.com",
     "user": "n1xegid9b9ppucpq",
     "password":"eugos1jmgvugw6ct",
-    "database":"wqqldvowgn4usn8p"   */
+    "database":"wqqldvowgn4usn8p"   
 
-     "host":"localhost",
+   /*   "host":"localhost",
     "user":"root",
     "password":"",
-    "database":"musicly" 
+    "database":"musicly"  */
 }
 
 module.exports = db;
