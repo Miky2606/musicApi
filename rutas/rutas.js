@@ -104,13 +104,14 @@ const upload = multer({
             return cb(null,true)
 
         }
-        cb("error grave")
+     cb(new Error("error"))
     }
 })
 
 
 
-rutas.post("/upload", upload.single('music') ,async (req,res)=> {
+rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
+   
    
     if(req.success == true){
         
@@ -285,6 +286,31 @@ let datos = [];
         res.json({
             music:"eliminado"
         })
+     })
+
+     
+
+     rutas.post("/updatePlaylistType/",async (req,res)=>{
+         console.log(req.body.id);
+
+        const select = await pool.query("Select * From playlist where id = ?", req.body.id)
+        if(select.length> 0){
+
+
+        
+
+        const update = await pool.query(`Update playlist Set type = '${req.body.type}' where id = '${req.body.id}' `);
+       
+        if(update){
+            res.json({message:"update"})
+        }else{
+            res.json({message:"error"})
+        }
+
+    }else{
+        res.json({message:"error"})
+    }
+         
      })
  
 
