@@ -157,9 +157,11 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
 
     //Playlist public
-    rutas.get("/playlistPublicAll", async  (req,res)=>{
-        const response = await pool.query("Select * From playlist where type = 'public' limit 4");
+    rutas.get("/playlistPublicAll/", async  (req,res)=>{
+        
 
+        const response = await pool.query(`Select * From playlist where type = 'public' ` );
+ 
         if(response.length > 0){
 
             res.json({music: response})
@@ -169,6 +171,27 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
             res.json({music:"vacio"})
         }
 
+    })
+
+    rutas.post("/buscarPlaylist",async(req,res)=>{
+  let response;
+       if(req.body.id == "null"){
+        response = await pool.query(`Select * From playlist where name like  '%${req.body.value}%' and type = '${req.body.type}' `);
+       }else{
+
+        response = await pool.query(`Select * From playlist where name like  '%${req.body.value}%' and id_user = '${req.body.id}' `);
+       }
+
+  
+     res.json({music:response})
+    
+ 
+   
+    })
+
+    rutas.get("/musicAll",async ( req,res)=>{
+        const find = await pool.query("Select * From music order by fecha DESC")
+        res.json({search:find })
     })
 
     //Playlist user
@@ -186,9 +209,11 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
     })
 
+  
+
     rutas.post("/searchMusic",verify.token,async (req,res)=>{
         const search = req.body.search;
-        console.log(search)
+       
         const response = await pool.query("Select * From music where name like  '%" + search + "%' or autor like  '%"+ search + "%' or ruta like '%" + search + "%'");
         res.json({search:response})
     })
@@ -297,8 +322,6 @@ let datos = [];
         if(select.length> 0){
 
 
-        
-
         const update = await pool.query(`Update playlist Set type = '${req.body.type}' where id = '${req.body.id}' `);
        
         if(update){
@@ -312,6 +335,8 @@ let datos = [];
     }
          
      })
+
+
  
 
 
