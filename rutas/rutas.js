@@ -8,6 +8,7 @@ const pool = require("../conexion");
 const jwt = require("jsonwebtoken");
 const secret = require("../rutas/secret")
 const verify = require("../rutas/verify");
+const { v4: uuidv4 } = require('uuid');
 const { Console } = require("console");
 
 rutas.get("/", (req,res)=>{
@@ -67,9 +68,14 @@ rutas.post("/login", async (req,res)=>{
    
 })
 
+rutas.get("/forgetPassword",async (req,res)=>{
+    var newPassword = `user${Math.floor(Math.random()* 100000)}`;
+res.json({password:newPassword})
+})
+
 rutas.get("/home",verify.token,async (req,res)=>{
     try {
-        const search = await pool.query("Select * From user where id =?",req.id);
+        const search = await pool.query("Select * From user where id =  ?",req.id);
         res.json({user:search})
     
         
@@ -86,7 +92,8 @@ rutas.get("/home",verify.token,async (req,res)=>{
 const storage = multer.diskStorage({
     destination: "rutas/uploads/",
     filename:(req,file,cb)=>{
-        cb(null,file.originalname);
+        req.name = uuidv4()+ path.extname(file.originalname).toLocaleLowerCase()
+        cb(null,req.name);
     }
 })
 
@@ -95,12 +102,14 @@ const upload = multer({
     storage,
     dest:"rutas/uploads/",
     fileFilter:(req,file,cb)=>{
+        console.log(file)
+        
         const fileType = /mp3|aac|wav|flac|alac|3gp|aaa|aax|aac|act|ape|m4a|wma/
         const extname = fileType.test(path.extname(file.originalname))
 
         if(extname){
             req.success = true;
-            req.name = file.originalname;
+            req.name = file.filename;
             return cb(null,true)
 
         }
@@ -116,7 +125,7 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
     if(req.success == true){
         
          
-      var metas = await  mm.parseFile(path.join(__dirname+ "/uploads/"+ req.file.originalname));
+      var metas = await  mm.parseFile(path.join(__dirname+ "/uploads/"+ req.name));
       const cover = mm.selectCover(metas.common.picture)
       
       const search = await pool.query("Select * From music where name = ?", metas.common.title)
@@ -132,7 +141,7 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
             autor : metas.common.artist,
             album : metas.common.album,
             picture : "",
-            ruta: req.file.originalname
+            ruta: req.name
         }
      const response = await pool.query("Insert into music Set ?", datos) 
      res.json({message:"subido"})
@@ -191,7 +200,7 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
     rutas.get("/musicAll",async ( req,res)=>{
         const find = await pool.query("Select * From music order by fecha DESC")
-        res.json({search:find })
+        res.json({search :find })
     })
 
     //Playlist user
@@ -246,6 +255,24 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
     })
 
+    rutas.post("/selectPlaylistFav/",async (req,res)=>{
+        let select;
+        if(req.body.id_playlist != null){
+            select = await pool.query(`Select * From playlist_save where id_user = ${req.body.id_user} and id_playlist = ${req.body.id_playlist} `);
+
+        }else{
+            select = await pool.query(`Select * From playlist_save where id_user = ${req.body.id_user}  `);
+        }
+      
+
+        if(select.length > 0 ){
+            res.json({playlist:select})
+        }else{
+            res.json({playlist:"vacio"})
+        }
+
+    })
+
     rutas.post("/addPlaylistFav",async  (req,res)=>{
         console.log(req.body)
         const search = await pool.query(`Select * From playlist_save where id_user = ${req.body.id_user} and id_playlist = ${req.body.id_playlist}`);
@@ -257,6 +284,21 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
         
          res.json({playlist:"add"})
+        }
+
+    })
+
+    rutas.post("/deletePlaylistFav/",async  (req,res)=>{
+        
+        const search = await pool.query(`Select * From playlist_save where id_user = ${req.body.id_user} and id_playlist = ${req.body.id_playlist}`);
+
+        if(search.length == 0){
+            res.json({playlist: " no exist"})
+        }else{
+         const playlist = await pool.query(`Delete From playlist_save where id_playlist = ${req.body.id_playlist} and id_user = ${req.body.id_user} `); 
+
+        
+         res.json({playlist:"delete"})
         }
 
     })
@@ -297,13 +339,6 @@ let datos = [];
     }) 
     
 
-    rutas.delete('/deletePlaylistFav/:id',async (req,res)=>{
-        const deleteMusicPlaylist = await pool.query("Delete From playlist_save where id = ?", req.params.id)
- 
-        res.json({
-            music:"eliminado"
-        })
-     })
 
      rutas.delete('/deletePlaylist/:id',async (req,res)=>{
         const deleteMusicPlaylist = await pool.query("Delete From playlist where id = ?", req.params.id)
