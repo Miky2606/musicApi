@@ -10,6 +10,7 @@ const secret = require("../rutas/secret")
 const verify = require("../rutas/verify");
 const { v4: uuidv4 } = require('uuid');
 const { Console } = require("console");
+const nodemailer = require("nodemailer");
 
 rutas.get("/", (req,res)=>{
     res.send("hola")
@@ -30,6 +31,39 @@ if(search.length == 0){
     datos.password =await  verify.encript(datos.password);
 
     const insert = await pool.query("insert into user  set ?", datos)
+    const html = `
+    <html>
+    <center>
+        <img src="https://www.musicApi.online/icon/icon.jpeg" style="background-position:center; width:250px; height:200px;" alt="">
+          
+        <div>Buenas: ${user.nombre}</div>
+        <p>Bienvenido a miuMusic. Gracias por ser parte de la familia</p>
+        
+  
+          
+    </center>
+  </html>`
+
+ 
+    var transporter = nodemailer.createTransport({
+      service: 'Gmail',
+      auth: {
+        user: "jonathanmiky99@gmail.com",
+        pass: "Libet2606@"
+      }
+    });
+  
+    
+    var mailOptions = {
+      from: "jonathanmiky99@gmail.com",
+      to:  datos.email,
+      subject: 'Buenas',
+     
+      html:html
+      
+    };
+
+    transporter.sendMail(mailOptions);
 const id = insert.insertId
     var token =  jwt.sign({id},secret,{ expiresIn: "1y" });
 
@@ -42,6 +76,8 @@ const id = insert.insertId
     
 
 })
+
+
 
 rutas.post("/login", async (req,res)=>{
     const search = await pool.query("Select * From user where email = ?", req.body.email)
@@ -68,9 +104,71 @@ rutas.post("/login", async (req,res)=>{
    
 })
 
-rutas.get("/forgetPassword",async (req,res)=>{
-    var newPassword = `user${Math.floor(Math.random()* 100000)}`;
-res.json({password:newPassword})
+rutas.post("/forgetPassword",async (req,res)=>{
+    console.log(req.body.email)
+
+    const select = await pool.query("Select * From user where email= ?",req.body.email);
+    if(select.length > 0){
+        var password = `user${Math.floor(Math.random()* 100000)}`;
+        var newPassword =  await  verify.encript(password );
+
+      
+
+        const html = `
+        <html>
+        <center>
+            <img src="https://www.musicApi.online/icon/icon.jpeg" style="background-position:center; width:250px; height:200px;" alt="">
+              
+            <div>Buenas: ${select[0].username}</div>
+            <p>Aqui esta su nuevo password: ${password}  </p>
+            
+      
+              
+        </center>
+      </html>
+        `
+       
+        
+      
+      
+        console.log(req.body)
+        var transporter = nodemailer.createTransport({
+          service: 'Gmail',
+          auth: {
+            user: "jonathanmiky99@gmail.com",
+            pass: "Libet2606@"
+          }
+        });
+      
+        
+        var mailOptions = {
+          from: "jonathanmiky99@gmail.com",
+          to:  req.body.email,
+          subject: 'Cambiar Password',
+         
+          html:html
+          
+        };
+        
+        transporter.sendMail(mailOptions, async function (error, info){
+          if (error) {
+            console.log(error);
+          } else {
+             
+            var update = await pool.query(`Update user Set password = "${newPassword}" where email = "${req.body.email}"`)
+            console.log("yes")
+            res.json({password:newPassword})
+      
+          }
+        });
+    
+ 
+
+    }else{
+        res.json({password:"no existe"})
+    }
+   
+  
 })
 
 rutas.get("/home",verify.token,async (req,res)=>{
@@ -228,6 +326,8 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
     })
 
 
+
+
     rutas.post("/crearPlaylist",async (req,res)=>{
         const search = await pool.query(`Select * From playlist where name = ? `, req.body.name);
         if(search.length > 0){
@@ -262,6 +362,7 @@ rutas.post("/upload", upload.single('music') ,async (req,res,error)=> {
 
         }else{
             select = await pool.query(`Select * From playlist_save where id_user = ${req.body.id_user}  `);
+            
         }
       
 
@@ -330,8 +431,8 @@ let datos = [];
     })
 
     rutas.delete('/deleteMusicPlaylist/:id',async (req,res)=>{
-        console.log(req.params.id)
-       const deleteMusicPlaylist = await pool.query("Delete From playlist_muisic where id_song = ?", req.params.id)
+        
+       const deleteMusicPlaylist = await pool.query("Delete From playlist where id = ?", req.params.id)
 
        res.json({
            music:"eliminado"
